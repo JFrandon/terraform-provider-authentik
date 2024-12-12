@@ -6,26 +6,30 @@ on:
 
 jobs:
   goreleaser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Unshallow
         run: git fetch --prune --unshallow
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-      - id: generate_token
-        uses: tibdex/github-app-token@v2
+          passphrase: ""
+      #- name: Configure GPG for Batch Mode
+      #  run: |
+      #    echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+      #    echo "no-tty" >> ~/.gnupg/gpg.conf
+      #    gpg-connect-agent updatestartuptty /bye >/dev/null
+      #    gpgconf --reload gpg-agent
+      #- name: Check GPG for Batch Mode
+      #  run: |
+      #    gpg --export-secret-key ${{ steps.import_gpg.outputs.fingerprint }}
+      - uses: actions/setup-go@v5
         with:
-          app_id: ${{ secrets.GH_APP_ID }}
-          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          go-version-file: go.mod
+          cache: true
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6.0.0
         with:
@@ -33,18 +37,4 @@ jobs:
           args: release --clean
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-      - name: Extract new version
-        id: version
-        run: |
-          cd dist/terraform-provider-authentik_linux_amd64_v1/
-          VERSION=$(./$(ls) -version)
-          echo "##[set-output name=version]$VERSION"
-      - name: Create a Sentry.io release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: authentik-security-inc
-          SENTRY_PROJECT: terraform-provider-authentik
-        with:
-          version: terraform-provider-authentik@${{ steps.version.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
