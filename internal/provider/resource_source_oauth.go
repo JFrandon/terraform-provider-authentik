@@ -131,6 +131,20 @@ func resourceSourceOAuth() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"property_mappings": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"property_mappings_group": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -185,6 +199,8 @@ func resourceSourceOAuthSchemaToSource(d *schema.ResourceData) (*api.OAuthSource
 		}
 		r.OidcJwks = c
 	}
+	r.UserPropertyMappings = castSlice[string](d.Get("property_mappings").([]interface{}))
+	r.GroupPropertyMappings = castSlice[string](d.Get("property_mappings_group").([]interface{}))
 	return &r, nil
 }
 
@@ -250,6 +266,10 @@ func resourceSourceOAuthRead(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 	setWrapper(d, "oidc_jwks", string(b))
+	localMappings := castSlice[string](d.Get("property_mappings").([]interface{}))
+	setWrapper(d, "property_mappings", listConsistentMerge(localMappings, res.UserPropertyMappings))
+	localGroupMappings := castSlice[string](d.Get("property_mappings_group").([]interface{}))
+	setWrapper(d, "property_mappings_group", listConsistentMerge(localGroupMappings, res.GroupPropertyMappings))
 	return diags
 }
 
